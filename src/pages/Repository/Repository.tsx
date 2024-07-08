@@ -16,5 +16,4 @@ export const Container = styled.div`
   display: flex;
   padding: 32px;
   width: calc(100% - 32px);
-  /* gap: 32px; */
 `

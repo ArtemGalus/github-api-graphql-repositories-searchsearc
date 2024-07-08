@@ -26,7 +26,7 @@ export const Pagination = (props: Props) => {
         return pagesCount;
       }
       return start + visiblePageCount - 1;
-    }, [currentPage, visiblePageCount, pagesCount, start]);
+    }, [visiblePageCount, pagesCount, start]);
     
     return (
         <Container>
