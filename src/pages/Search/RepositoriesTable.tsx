@@ -1,6 +1,4 @@
 import React from "react";
-import { request } from "graphql-request";
-import { queryRepositoriesNextPage, queryRepositoriesPrevPage, queryUserRepositoriesNextPage } from "../../shared/api/Repositories/queries";
 import type { RepositoriesNextPageQuery } from "../../gql/graphql";
 import { Pagination } from "../../shared/components/Pagination";
 import * as model from "../model";
@@ -14,101 +12,72 @@ const VISIBLE_PAGE_COUNT = 10;
 
 export const RepositoriesTable = React.memo(() => {
   const [data, setData] = React.useState<DataType>([]);
-  const [state, onChangePage] = useUnit([model.$repositorySearchState, model.changeSearchState]);
-  
+  const pagination = useUnit(model.$pagination);
+  const [currentPage, onPageChange] = useUnit([model.$currentPage, model.onPageChange]);
+  const [searchValue, onValueChange] = useUnit([model.$searchValue, model.onValueChange]);
+  const [loadingNext, loadingPrev, loadingUserNext, loadingUserPrev] = useUnit([model.getRepositoriesNextPageFx.pending, model.getRepositoriesPrevPageFx.pending, model.getUserRepositoriesNextPageFx.pending, model.getUserRepositoriesPrevPageFx.pending]);
+
+  const loading = React.useMemo(() => loadingNext || loadingPrev || loadingUserNext || loadingUserPrev, [loadingNext, loadingPrev, loadingUserNext, loadingUserPrev]);
 
   const onNext = React.useCallback(() => {
-    request(`${import.meta.env.VITE_GQL_END_POINT}`, queryRepositoriesNextPage, { query: state.searchValue, cursor: state.cursorEnd }, {
-      authorization: `Bearer ${import.meta.env.VITE_GITHUB_TOKEN}`,
-    }).then(data => {
-      setData(data.search.nodes);
-      let totalCount = data.search.repositoryCount;
-      totalCount = totalCount % VISIBLE_PAGE_COUNT === 0 ? totalCount / VISIBLE_PAGE_COUNT : Math.floor(totalCount / VISIBLE_PAGE_COUNT) + 1;
-      onChangePage({
-        cursorStart: data.search.pageInfo.startCursor ?? "",
-        cursorEnd: data.search.pageInfo.endCursor ?? "",
-        pagesCount: totalCount,
-        currentPage: state.currentPage + 1,
-        searchValue: state.searchValue,
+    if (searchValue) {
+      model.getRepositoriesNextPageFx({ query: searchValue, cursor: pagination.cursorEnd }).then(data => {
+        setData(data.search.nodes);
+        onPageChange(currentPage + 1);
       });
-
-    });
-  }, [state.searchValue, state.cursorEnd]);
-
-  const onPrev = React.useCallback(() => {
-    request(`${import.meta.env.VITE_GQL_END_POINT}`, queryRepositoriesPrevPage, { query: state.searchValue, cursor: state.cursorStart }, {
-      authorization: `Bearer ${import.meta.env.VITE_GITHUB_TOKEN}`,
-    }).then(data => {
-      setData(data.search.nodes);
-      let totalCount = data.search.repositoryCount;
-      totalCount = totalCount % VISIBLE_PAGE_COUNT === 0 ? totalCount / VISIBLE_PAGE_COUNT : Math.floor(totalCount / VISIBLE_PAGE_COUNT) + 1;
-      onChangePage({
-        cursorStart: data.search.pageInfo.startCursor ?? "",
-        cursorEnd: data.search.pageInfo.endCursor ?? "",
-        pagesCount: totalCount,
-        currentPage: state.currentPage - 1,
-        searchValue: state.searchValue,
-      });
-
-    });
-  }, [state.searchValue, state.cursorStart]);
-
-  React.useEffect(() => {
-    
-    if (state.searchValue) {
-      request(`${import.meta.env.VITE_GQL_END_POINT}`, queryRepositoriesNextPage, { query: state.searchValue, cursor: state.cursorEnd }, {
-      authorization: `Bearer ${import.meta.env.VITE_GITHUB_TOKEN}`,
-    }).then(data => {
-      setData(data.search.nodes);
-      let totalCount = data.search.repositoryCount;
-      totalCount = totalCount % VISIBLE_PAGE_COUNT === 0 ? totalCount / VISIBLE_PAGE_COUNT : Math.floor(totalCount / VISIBLE_PAGE_COUNT) + 1;
-      onChangePage({
-        cursorStart: data.search.pageInfo.startCursor ?? "",
-        cursorEnd: data.search.pageInfo.endCursor ?? "",
-        pagesCount: totalCount,
-        currentPage: state.currentPage,
-        searchValue: state.searchValue,
-      });
-
-    });
       return;
     }
-    if (state.searchValue === '') {
-      request(`${import.meta.env.VITE_GQL_END_POINT}`, queryUserRepositoriesNextPage, { login: `${import.meta.env.VITE_GITHUB_LOGIN}`, cursor:"" }, {
-        authorization: `Bearer ${import.meta.env.VITE_GITHUB_TOKEN}`,
-      }).then(data => {
+    model.getUserRepositoriesNextPageFx({ query: searchValue, cursor: pagination.cursorEnd }).then(data => {
+      setData(data.user?.repositories?.nodes);
+      onPageChange(currentPage + 1);
+    });
+  }, [searchValue, pagination.cursorEnd, onPageChange, currentPage]);
+
+  const onPrev = React.useCallback(() => {
+    if (searchValue) {
+      model.getRepositoriesPrevPageFx({ query: searchValue, cursor: pagination.cursorStart }).then(data => {
+        setData(data.search.nodes);
+        onPageChange(currentPage - 1);
+      });
+      return;
+    }
+    model.getUserRepositoriesPrevPageFx({ query: searchValue, cursor: pagination.cursorStart }).then(data => {
+      setData(data.user?.repositories?.nodes);
+      onPageChange(currentPage - 1);
+    });
+  }, [searchValue, pagination.cursorStart, onPageChange, currentPage]);
+
+  React.useEffect(() => {
+    if (searchValue) {
+      model.getRepositoriesNextPageFx({ query: searchValue, cursor: "" }).then(data => {
+        setData(data.search.nodes);
+        onPageChange(1);
+      });
+      return;
+    }
+    if (searchValue === '') {
+      model.getUserRepositoriesNextPageFx({ login: `${import.meta.env.VITE_GITHUB_LOGIN}`, cursor: "" }).then(data => {
         setData(data.user?.repositories?.nodes as DataType);
-        let totalCount = data.user?.repositories?.totalCount ?? 1;
-        totalCount = totalCount % VISIBLE_PAGE_COUNT === 0 ? totalCount / VISIBLE_PAGE_COUNT : Math.floor(totalCount / VISIBLE_PAGE_COUNT) + 1;
-        onChangePage({
-          cursorStart: data.user?.repositories.pageInfo.startCursor ?? "",
-          cursorEnd: data.user?.repositories.pageInfo.endCursor ?? "",
-          pagesCount: totalCount,
-          currentPage: 1,
-          searchValue: state.searchValue,
-        });
+        onPageChange(1);
       });
     }
-  }, [state.searchValue]);
+    
+  }, [searchValue, onPageChange]);
   
   return (
     <Container>
-      <Input type="text" placeholder="Search" value={state.searchValue} onChange={(e) => onChangePage({
-        cursorStart: "",
-        cursorEnd: "",
-        pagesCount: 1,
-        currentPage: 1,
-        searchValue:e.target.value,
-        })} />
-      <RepositoriesList
+      <Input type="text" placeholder="Search" value={searchValue} onChange={(e) => onValueChange(e.target.value)} />
+      {!loading && <RepositoriesList
         data={data ? data.filter(item => item?.__typename === "Repository"): []}
-        />
-      {state.pagesCount > 1 && <Pagination
-        currentPage={state.currentPage}
-        pagesCount={state.pagesCount}
+      />}
+      {loading && <div>Loading...</div>}
+      {!loading && <Pagination
+        itemsCount={10}
+        currentPage={currentPage}
+        totalCount={pagination.repositoryCount}
         onNext={onNext}
         onPrev={onPrev}
-        visiblePageCount={10}
+        visiblePageCount={VISIBLE_PAGE_COUNT}
       />}
     </Container>
   )

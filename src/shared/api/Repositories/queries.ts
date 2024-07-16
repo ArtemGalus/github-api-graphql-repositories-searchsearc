@@ -47,7 +47,7 @@ export const queryRepositoriesPrevPage = graphql(`
 );
 
 export const queryUserRepositoriesNextPage = graphql(`
-    query queryUserRepositoriesNextPage($login: String!, $cursor: String!) {
+    query UserRepositoriesNextPage($login: String!, $cursor: String!) {
         user(login: $login) {
             repositories(first:10 after: $cursor) {
                 totalCount,
@@ -69,7 +69,7 @@ export const queryUserRepositoriesNextPage = graphql(`
 );
 
 export const queryUserRepositoriesPrevPage = graphql(`
-    query queryUserRepositoriesPrevPage($login: String!, $cursor: String!) {
+    query UserRepositoriesPrevPage($login: String!, $cursor: String!) {
         user(login: $login) {
             repositories(first:10 before: $cursor) {
                 totalCount,
@@ -91,7 +91,7 @@ export const queryUserRepositoriesPrevPage = graphql(`
 );
 
 export const queryRepositoryById = graphql(`
-    query queryRepositoryById($id: ID!){ 
+    query RepositoryById($id: ID!){ 
         node(id: $id){
             __typename,
             ... on Repository {

@@ -1,19 +1,17 @@
 import React from "react";
-import request from "graphql-request";
 import { queryRepositoryById } from "../../shared/api/Repositories/queries";
-import type { QueryRepositoryByIdQuery } from "../../gql/graphql";
+import type { RepositoryByIdQuery } from "../../gql/graphql";
 import styled from "styled-components";
-import { Table, Item, Row, Stars } from "../../shared/components/Table"; 
+import { Table, Item, Row, Stars } from "../../shared/components/Table";
+import { makeRequest } from "../../shared/api/makeRequest";
 
 
 export const Card = React.memo<{id?: string}>((props) => {
     const { id } = props;
-    const [ data, setData ] = React.useState<QueryRepositoryByIdQuery>();
+    const [ data, setData ] = React.useState<RepositoryByIdQuery>();
 
     React.useEffect(() => {
-        request(`${import.meta.env.VITE_GQL_END_POINT}`, queryRepositoryById, { id: id ?? "" }, {
-            authorization: `Bearer ${import.meta.env.VITE_GITHUB_TOKEN}`,
-        }).then(data => setData(data.node?.__typename === "Repository" ? data : undefined));
+        makeRequest<RepositoryByIdQuery>(queryRepositoryById, {id: id}).then(data => setData(data.node?.__typename === "Repository" ? data : undefined));
     }, [id]);
 
     return (

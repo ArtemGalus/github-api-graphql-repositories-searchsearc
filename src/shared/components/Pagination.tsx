@@ -2,14 +2,15 @@ import React from "react";
 import styled from "styled-components";
 
 type Props = {
-    visiblePageCount: number;
+  visiblePageCount: number;
+  itemsCount: number;
     currentPage: number;
-    pagesCount: number;
+    totalCount: number;
     onNext: () => void;
     onPrev: () => void;
 }
 export const Pagination = (props: Props) => {
-    const { visiblePageCount, onNext, onPrev, currentPage, pagesCount } = props;
+    const { visiblePageCount, onNext, onPrev, currentPage, totalCount, itemsCount } = props;
 
     const start = React.useMemo(() => {
       if (currentPage - Math.floor(visiblePageCount / 2) <= 0) {
@@ -19,22 +20,22 @@ export const Pagination = (props: Props) => {
     }, [currentPage, visiblePageCount]);
 
     const end = React.useMemo(() => {
-      if (visiblePageCount > pagesCount) {
-        return pagesCount;
+      if (visiblePageCount > Math.ceil(totalCount / itemsCount)) {
+        return Math.ceil(totalCount / itemsCount);
       }
-      if (start + visiblePageCount - 1 > pagesCount) {
-        return pagesCount;
+      if (start + visiblePageCount - 1 > Math.ceil(totalCount / itemsCount)) {
+        return Math.ceil(totalCount / itemsCount);
       }
       return start + visiblePageCount - 1;
-    }, [visiblePageCount, pagesCount, start]);
+    }, [visiblePageCount, totalCount, start, itemsCount]);
     
     return (
         <Container>
-            <Button onClick={onPrev} disabled={pagesCount === 1 || currentPage === 1}>{"<"}</Button>
+            <Button onClick={onPrev} disabled={Math.ceil(totalCount / itemsCount) === 1 || currentPage === 1}>{"<"}</Button>
             {Array.from(new Array(end - start + 1), (_, i) => i + start).map((item) => {
                 return <Page $isCurrent={currentPage === item} key={item}>{item}</Page>;
             })}
-            <Button onClick={onNext} disabled={pagesCount === 1 || currentPage === pagesCount}>{">"}</Button>
+            <Button onClick={onNext} disabled={Math.ceil(totalCount / itemsCount) === 1 || currentPage === totalCount}>{">"}</Button>
         </Container>
     )
 }
